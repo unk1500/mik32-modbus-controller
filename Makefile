@@ -9,10 +9,7 @@ SRCS += $(wildcard $(PROJECT_SRC_DIR)/*.c)
 SRCS += $(wildcard $(PROJECT_SRC_DIR)/*.cpp)
 SRCS += $(RUNTIME)
 SRCS += $(SHARED_DIR)/libs/uart_lib.c
-#SRCS += $(SHARED_DIR)/libs/xprintf.c
-SRCS += $(HAL_DIR)/peripherals/Source/mik32_hal_gpio.c
-#SRCS += $(HAL_DIR)/peripherals/Source/mik32_hal_pcc.c
-#SRCS += $(HAL_DIR)/peripherals/Source/mik32_hal_adc.c
+VERSION := $(shell cat VERSION)
 	
 LIBS += -lc 
 
@@ -47,7 +44,8 @@ INC += -I $(HAL_DIR)/utilities/Include
 
 OBJDIR = $(PROJECT_BUILD_DIR)
 
-CFLAGS +=  -Os -MD -fstrict-volatile-bitfields -fno-strict-aliasing -march=$(MARCH) -mabi=$(MABI) -fno-common -fno-builtin-printf -DBUILD_NUMBER=$(BUILD_NUMBER)+1 -flto -march=rv32i_zicsr
+CFLAGS +=  -Os -MD -fstrict-volatile-bitfields -fno-strict-aliasing -march=$(MARCH) -mabi=$(MABI) -fno-common -fno-builtin-printf -DBUILD_NUMBER=$(BUILD_NUMBER)+1 -DFW_VERSION=\"$(VERSION)\" -flto -march=rv32i_zicsr
+CFLAGS +=  -DFW_VERSION=\"$(VERSION)\"
 
 LDFLAGS +=  -nostdlib -lgcc -mcmodel=medlow -nostartfiles -ffreestanding -Wl,-Bstatic,-T,$(LDSCRIPT),-Map,$(OBJDIR)/$(PROJECT_NAME).map,--print-memory-usage -march=$(MARCH) -mabi=$(MABI) -L $(SHARED_DIR)/ldscripts/
 

@@ -1,5 +1,12 @@
 #include "main.h"
 
+char* const version = FW_VERSION;
+
+volatile int32_t analog_temperature[2] = 
+	{195, 387};
+volatile int32_t analog_humidity[2] = 
+	{456, 567};
+
 extern volatile struct usart_modbus_buffer ub;
 
 void ClockInit(void)
@@ -64,29 +71,6 @@ void trap_handler()
 	}
 }
 
-uint16_t crc16_modbus(uint8_t *buffer, uint16_t length)
-{
-    uint16_t crc = 0xFFFF;
-    for (uint16_t i = 0; i < length; i++)
-	{
-        crc ^= (uint16_t)buffer[i];
-        for (int j = 0; j < 8; j++)
-		{
-            if (crc & 0x0001)
-			{
-                crc >>= 1;
-                crc ^= 0xA001;
-            }
-			else
-			{
-                crc >>= 1;
-            }
-        }
-    }
-    return crc;
-}
-
-
 int main(void)
 {
 	ClockInit();
@@ -126,24 +110,13 @@ int main(void)
 
 	while (1)
 	{
-		if ((*(&ub)).flag_command_ready)
+		if (ub.flag_command_ready)
 		{
 			uint8_t command_input[8];
 			memset(command_input, 0, 8);
-			memcpy(command_input, (*(&ub)).pointer_finished_string + 1, 8);
-			(*(&ub)).flag_command_ready = 0;
-			// TODO: Parse Command Here
-
-			// (!!!) Debug Echo
-			for (int i = 0; i < 6; i++)
-			{
-				UART_0_SendByte(command_input[i]);
-			}
-			// (!!!) Debug Cald and Send CRC
-			uint16_t crc = crc16_modbus(command_input, 6);
-			UART_0_SendByte(crc & 0xFF);
-			UART_0_SendByte((crc >> 8) & 0xFF);
-
+			memcpy(command_input, ub.pointer_finished_string + 1, 8);
+			ub.flag_command_ready = 0;
+			ParseAndAnswer(command_input);
 		}
 	
 		// for (volatile int i = 0; i < 100000; i++);
