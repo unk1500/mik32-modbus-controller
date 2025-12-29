@@ -16,6 +16,7 @@
 #include <timer32.h>
 
 #include "usart.h"
+#include "dht22.h"
 #include "xprintf.h"
 
 #define	MIK32V2
@@ -30,5 +31,8 @@
 #define PIN_LED1 3	 	            // LED1 is PORT_0_3
 #define PIN_LED2 3	 	            // LED2 is PORT_1_3
 #define PIN_BUTTON 8	            // BUTTON is PORT_0_8
+
+#define PIN_DHT1 6	 	            // DHT22 at PORT_1_6
+#define PIN_DHT2 7	 	            // DHT22 is PORT_1_6
 
 #endif

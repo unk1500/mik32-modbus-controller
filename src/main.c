@@ -2,10 +2,10 @@
 
 char* const version = FW_VERSION;
 
-volatile int32_t analog_temperature[2] = 
-	{195, 387};
-volatile int32_t analog_humidity[2] = 
-	{456, 567};
+volatile uint32_t analog_temperature[2] = 
+	{0xFFFF, 0xFFFF};
+volatile uint32_t analog_humidity[2] = 
+	{0xFFFF, 0xFFFF};
 
 extern volatile struct usart_modbus_buffer ub;
 
@@ -85,6 +85,7 @@ int main(void)
 	EPIC->MASK_LEVEL_SET = 1 << EPIC_TIMER32_0_INDEX;
 	// Set UART0 Mask Interrupt
     EPIC->MASK_LEVEL_SET = (1 << EPIC_UART_0_INDEX);
+
 	// UART_0 (Modbus RTU) Init
 	UART_0_Init();
 
@@ -106,6 +107,10 @@ int main(void)
 	PAD_CONFIG->PORT_0_CFG &= ~(0b11 << (2 * PIN_BUTTON)); // Clear port 0 pin 8 settings
 	GPIO_0->DIRECTION_IN = (1 << PIN_BUTTON); // Set port 0 pin 8 direction as input
 
+	// (!!!) DEBUG PIN
+	PAD_CONFIG->PORT_1_CFG &= ~(0b11 << (2 * 10));
+	GPIO_1->DIRECTION_OUT = (1 << 10);
+
 	int counter = 0;
 
 	while (1)
@@ -118,7 +123,8 @@ int main(void)
 			ub.flag_command_ready = 0;
 			ParseAndAnswer(command_input);
 		}
-	
-		// for (volatile int i = 0; i < 100000; i++);
+		// (!) Replace in with timer
+	    for (volatile int i = 0; i < 1000000; i++);
+		DHT22_Read(6, &analog_temperature[0], &analog_humidity[0]);
 	}
 }

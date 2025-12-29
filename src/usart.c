@@ -49,6 +49,7 @@ void ParseAndAnswer(uint8_t *command_input)
 {
     uint8_t answer_output[10];
     uint8_t answer_size = 0;
+    uint16_t reg_address;
 
     // (!) Replace with real address
     answer_output[0] = 0x01;
@@ -74,17 +75,24 @@ void ParseAndAnswer(uint8_t *command_input)
                 break;
             case 0x03:
                 // Read Holding Registers
-                // (!!!) Only version answer
-                answer_output[2] = 0x04;
-                answer_output[3] = 0x76;
-                answer_output[4] = version[0];
-                answer_output[5] = version[1];
-                answer_output[6] = version[2];
-                answer_size = 7;
+                reg_address = (command_input[2] << 8) | command_input[3];
+
+                // Check version register address
+                if (reg_address == 0x7D6)
+                {
+                    answer_output[2] = 0x04;
+                    // 'v' char code
+                    answer_output[3] = 0x76;
+                    // version string chars
+                    answer_output[4] = version[0];
+                    answer_output[5] = version[1];
+                    answer_output[6] = version[2];
+                    answer_size = 7;
+                }
                 break;
             case 0x04:
                 // Read Input Registers
-                uint16_t reg_address = (command_input[2] << 8) | command_input[3];
+                reg_address = (command_input[2] << 8) | command_input[3];
 
                 if (reg_address < AI_COUNT)
                 {
