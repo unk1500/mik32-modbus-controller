@@ -23,16 +23,23 @@
 
 #define OSC_SYSTEM_VALUE ((uint32_t)32000000U)
 
+// Registers Parameters
 #define DO_COUNT 2	 	            // Coils Count
 #define DI_COUNT 1	 	            // Discrete Inputs Count
 #define AI_COUNT 2	 	            // Analog Inputs Count
 #define AI_HUMIDITY_OFFSET 0x190    // Humidity Registers Offset
 
+// DHT22 Sensors Pins (PORT_1)
+#define PIN_DHT1 6	 	            // DHT22 at PORT_1_6
+#define PIN_DHT2 7	 	            // DHT22 is PORT_1_6
+
+// Relay Pins (PORT_0)
+#define PIN_RELAY1 0
+#define PIN_RELAY2 1
+
+// Debug Pins
 #define PIN_LED1 3	 	            // LED1 is PORT_0_3
 #define PIN_LED2 3	 	            // LED2 is PORT_1_3
 #define PIN_BUTTON 8	            // BUTTON is PORT_0_8
-
-#define PIN_DHT1 6	 	            // DHT22 at PORT_1_6
-#define PIN_DHT2 7	 	            // DHT22 is PORT_1_6
 
 #endif

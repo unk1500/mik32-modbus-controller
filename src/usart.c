@@ -50,6 +50,8 @@ void ParseAndAnswer(uint8_t *command_input)
     uint8_t answer_output[10];
     uint8_t answer_size = 0;
     uint16_t reg_address;
+    uint16_t data_count;
+    uint32_t pin_number;
 
     // (!) Replace with real address
     answer_output[0] = 0x01;
@@ -58,16 +60,38 @@ void ParseAndAnswer(uint8_t *command_input)
         return;
     else
     {
+        reg_address = (command_input[2] << 8) | command_input[3];
+
         switch (command_input[1])
         {
             case 0x01:
                 // Read Coil Status
-                if ((command_input[2] != 0) || (command_input[3] > DO_COUNT - 1))
+                data_count = (command_input[4] << 8) | command_input[5];
+
+                if (reg_address + data_count - 1 > DO_COUNT - 1)
                     // Error code 0x02: Illegal Data Address
                     return;
                 else
                 {
-                    
+                    answer_output[2] = 0x01;
+                    answer_output[3] = 0x00;
+                    // Read both of relay
+                    if (data_count == 2)
+                    {
+                        answer_output[3] |= (GPIO_0->STATE & (1 << PIN_RELAY1)) ? 1 : 0;
+                        answer_output[3] |= ((GPIO_0->STATE & (1 << PIN_RELAY2)) ? 1 : 0) << 1;
+                    }
+                    // Read one of relay
+                    else
+                    {
+                        if (reg_address == 0)
+                            pin_number = PIN_RELAY1;
+                        else
+                            pin_number = PIN_RELAY2;
+
+                        answer_output[3] |= ((GPIO_0->STATE & (1 << pin_number)) ? 1 : 0);
+                    }
+                    answer_size = 4;
                 }
                 break;
             case 0x02:
@@ -75,7 +99,6 @@ void ParseAndAnswer(uint8_t *command_input)
                 break;
             case 0x03:
                 // Read Holding Registers
-                reg_address = (command_input[2] << 8) | command_input[3];
 
                 // Check version register address
                 if (reg_address == 0x7D6)
@@ -92,7 +115,6 @@ void ParseAndAnswer(uint8_t *command_input)
                 break;
             case 0x04:
                 // Read Input Registers
-                reg_address = (command_input[2] << 8) | command_input[3];
 
                 if (reg_address < AI_COUNT)
                 {
@@ -120,6 +142,40 @@ void ParseAndAnswer(uint8_t *command_input)
                 break;
             case 0x05:
                 // Force Single Coil
+
+                if (reg_address > DO_COUNT - 1)
+                    // Error code 0x02: Illegal Data Address
+                    return;
+                else
+                {
+                    uint16_t data_value = (command_input[4] << 8) | command_input[5];
+
+                    if (reg_address == 0)
+                        pin_number = PIN_RELAY1;
+                    else
+                        pin_number = PIN_RELAY2;
+
+                    if (data_value == 0xFF00)
+                    {
+                        GPIO_0->OUTPUT |= (1 << pin_number);
+
+                    }
+                    else if (data_value == 0x0000)
+                    {
+                        GPIO_0->OUTPUT &= ~(1 << pin_number);
+                    }
+                    else
+                        // Error code 0x03: Illegal Data Value
+                        return;
+
+                    answer_output[2] = command_input[2];
+                    answer_output[3] = command_input[3];
+                    answer_output[4] = command_input[4];
+                    answer_output[5] = command_input[5];
+                    answer_size = 6;
+
+                }
+
                 break;
             case 0x06:
                 // Preset Single Register

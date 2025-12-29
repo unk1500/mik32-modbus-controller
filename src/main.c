@@ -7,6 +7,8 @@ volatile uint32_t analog_temperature[2] =
 volatile uint32_t analog_humidity[2] = 
 	{0xFFFF, 0xFFFF};
 
+volatile uint32_t flag_measurement = 0;
+
 extern volatile struct usart_modbus_buffer ub;
 
 void ClockInit(void)
@@ -63,6 +65,7 @@ void trap_handler()
 	}
 	else if (EPIC->RAW_STATUS & (1 << EPIC_TIMER32_0_INDEX))
 	{
+		flag_measurement = 1;
 		LedBlink();
 		// Timer32 Overflow Interrupt Flag Clear
 		TIMER32_0->INT_CLEAR = TIMER32_INT_OVERFLOW_M;
@@ -75,7 +78,7 @@ int main(void)
 {
 	ClockInit();
 	// Timer32 Init
-	TIMER32_0->TOP = 16000000u;
+	TIMER32_0->TOP = 32000000;
 	TIMER32_0->INT_MASK = TIMER32_INT_OVERFLOW_M;
 	// Epic Init
 	EPIC->MASK_EDGE_CLEAR = 0xFFFF;
@@ -94,6 +97,12 @@ int main(void)
 
 	// Timer32 Enable
 	TIMER32_0->ENABLE = TIMER32_ENABLE_TIM_EN_M;
+
+	// Relay GPIO Pins Init
+	PAD_CONFIG->PORT_0_CFG &= ~(0b11 << (2 * PIN_RELAY1));
+	PAD_CONFIG->PORT_0_CFG &= ~(0b11 << (2 * PIN_RELAY2));
+	GPIO_0->DIRECTION_OUT = (1 << PIN_RELAY1);
+	GPIO_0->DIRECTION_OUT = (1 << PIN_RELAY2);
 
 	// GPIO port 0 pin 3 (LED1) Init as Output
 	PAD_CONFIG->PORT_0_CFG &= ~(0b11 << (2 * PIN_LED1)); // Clear port 0 pin 3 settings
@@ -123,8 +132,15 @@ int main(void)
 			ub.flag_command_ready = 0;
 			ParseAndAnswer(command_input);
 		}
-		// (!) Replace in with timer
-	    for (volatile int i = 0; i < 1000000; i++);
-		DHT22_Read(6, &analog_temperature[0], &analog_humidity[0]);
+
+		if (flag_measurement == 1)
+		{
+			// Outdoor Sensor
+			DHT22_Read(PIN_DHT1, &analog_temperature[0], &analog_humidity[0]);
+			// Indoor Sensor
+			DHT22_Read(PIN_DHT2, &analog_temperature[1], &analog_humidity[1]);
+
+			flag_measurement = 0;
+		}
 	}
 }
