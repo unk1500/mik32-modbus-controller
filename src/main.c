@@ -2,6 +2,8 @@
 
 char* const version = FW_VERSION;
 
+volatile uint8_t device_address = 0x01;
+
 volatile uint32_t analog_temperature[2] = 
 	{0xFFFF, 0xFFFF};
 volatile uint32_t analog_humidity[2] = 

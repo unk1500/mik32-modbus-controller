@@ -1,4 +1,4 @@
-PROJECT_NAME = blink
+PROJECT_NAME = mik32-modbus-controller
 PROJECT_DIR = .
 PROJECT_BUILD_DIR = $(PROJECT_DIR)/build
 PROJECT_SRC_DIR = $(PROJECT_DIR)/src

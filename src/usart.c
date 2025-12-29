@@ -1,6 +1,7 @@
 #include "main.h"
 
 extern const char* const version;
+extern volatile int8_t device_address;
 extern volatile int32_t analog_temperature[2];
 extern volatile int32_t analog_humidity[2];
 
@@ -53,19 +54,18 @@ void ParseAndAnswer(uint8_t *command_input)
     uint16_t data_count;
     uint32_t pin_number;
 
-    // (!) Replace with real address
-    answer_output[0] = 0x01;
-    // (!) Replace with real address
-    if (command_input[0] != 1)
+    // Device address
+    answer_output[0] = device_address;
+    // Device address check
+    if (command_input[0] != device_address)
         return;
     else
     {
         reg_address = (command_input[2] << 8) | command_input[3];
-
         switch (command_input[1])
         {
+            // Read Coil Status
             case 0x01:
-                // Read Coil Status
                 data_count = (command_input[4] << 8) | command_input[5];
 
                 if (reg_address + data_count - 1 > DO_COUNT - 1)
@@ -94,12 +94,12 @@ void ParseAndAnswer(uint8_t *command_input)
                     answer_size = 4;
                 }
                 break;
+            // Read Input Status
             case 0x02:
-                // Read Input Status
+                
                 break;
+            // Read Holding Registers
             case 0x03:
-                // Read Holding Registers
-
                 // Check version register address
                 if (reg_address == 0x7D6)
                 {
@@ -112,10 +112,17 @@ void ParseAndAnswer(uint8_t *command_input)
                     answer_output[6] = version[2];
                     answer_size = 7;
                 }
+                // Check device address register address
+                else if (reg_address == 0x00)
+                {
+                    answer_output[2] = 0x02;
+                    answer_output[3] = 0x00;
+                    answer_output[4] = device_address;
+                    answer_size = 5;
+                }
                 break;
+            // Read Input Registers
             case 0x04:
-                // Read Input Registers
-
                 if (reg_address < AI_COUNT)
                 {
                     // Temperature addresses
@@ -140,9 +147,8 @@ void ParseAndAnswer(uint8_t *command_input)
                     return;
                 }
                 break;
+            // Force Single Coil
             case 0x05:
-                // Force Single Coil
-
                 if (reg_address > DO_COUNT - 1)
                     // Error code 0x02: Illegal Data Address
                     return;
@@ -167,18 +173,32 @@ void ParseAndAnswer(uint8_t *command_input)
                     else
                         // Error code 0x03: Illegal Data Value
                         return;
-
                     answer_output[2] = command_input[2];
                     answer_output[3] = command_input[3];
                     answer_output[4] = command_input[4];
                     answer_output[5] = command_input[5];
                     answer_size = 6;
-
                 }
 
                 break;
+            // Preset Single Register
             case 0x06:
-                // Preset Single Register
+                if (reg_address != 0)
+                    // Error code 0x02: Illegal Data Address
+                    return;
+                else
+                {
+                    uint16_t data_value = (command_input[4] << 8) | command_input[5];
+                    if (data_value > 247)
+                        // Error code 0x03: Illegal Data Value
+                        return;
+                    else
+                    {
+                        /// (!!!) Whire address to EEPROM
+                    }
+
+                }
+                break;
             defaulf:
                 // Error code 0x01: Illegal Function
                 return;
