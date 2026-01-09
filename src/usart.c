@@ -225,11 +225,20 @@ void ParseAndAnswer(uint8_t *command_input)
     answer_output[answer_size] = crc & 0xFF;
     answer_output[answer_size + 1] = (crc >> 8) & 0xFF;
 
+    GPIO_1->OUTPUT |= (1 << PIN_LED2);
+
+    // ENABLE
+    GPIO_1->OUTPUT |= (1 << PIN_REDE);
+    for (volatile int debug_delay = 0; debug_delay < 100; debug_delay++);
+
     for (int i = 0; i < answer_size + 2; i++)
     {
         UART_0_SendByte(answer_output[i]);
     }
 
+    // DISABLE
+    for (volatile int debug_delay = 0; debug_delay < 100; debug_delay++);
+    GPIO_1->OUTPUT &= ~(1 << PIN_REDE);
 }
 
 void UART_0_Init()

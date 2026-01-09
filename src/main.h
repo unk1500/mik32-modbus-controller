@@ -37,6 +37,9 @@
 #define PIN_RELAY1 0
 #define PIN_RELAY2 1
 
+// RS-485 Pins (PORT_1)
+#define PIN_REDE 0
+
 // Debug Pins
 #define PIN_LED1 3	 	            // LED1 is PORT_0_3
 #define PIN_LED2 3	 	            // LED2 is PORT_1_3

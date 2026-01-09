@@ -106,6 +106,11 @@ int main(void)
 	GPIO_0->DIRECTION_OUT = (1 << PIN_RELAY1);
 	GPIO_0->DIRECTION_OUT = (1 << PIN_RELAY2);
 
+	// RS-485 REDE Pin Init
+    GPIO_1->OUTPUT &= ~(1 << PIN_REDE);
+	PAD_CONFIG->PORT_1_CFG &= ~(0b11 << (2 * PIN_REDE));
+	GPIO_1->DIRECTION_OUT = (1 << PIN_REDE);
+
 	// GPIO port 0 pin 3 (LED1) Init as Output
 	PAD_CONFIG->PORT_0_CFG &= ~(0b11 << (2 * PIN_LED1)); // Clear port 0 pin 3 settings
 	GPIO_0->DIRECTION_OUT = (1 << PIN_LED1); // Set port 0 pin 3 direction as output
