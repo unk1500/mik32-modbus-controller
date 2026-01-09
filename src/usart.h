@@ -37,7 +37,8 @@ struct usart_modbus_buffer
 void UART_0_Init(void);
 void UART_0_IRQHandler(void);
 void UART_0_SendByte(uint8_t data);
-uint16_t CrcModbus(uint8_t *, uint16_t);
+void UART_0_SendAnswer(volatile uint8_t *, uint32_t);
+uint16_t CrcModbus(volatile uint8_t *, uint16_t);
 void ParseAndAnswer(uint8_t *);
 
 #endif

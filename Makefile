@@ -8,7 +8,6 @@ PROJECT_SRC_DIR = $(PROJECT_DIR)/src
 SRCS += $(wildcard $(PROJECT_SRC_DIR)/*.c)
 SRCS += $(wildcard $(PROJECT_SRC_DIR)/*.cpp)
 SRCS += $(RUNTIME)
-SRCS += $(SHARED_DIR)/libs/uart_lib.c
 VERSION := $(shell cat VERSION)
 	
 LIBS += -lc 
@@ -30,7 +29,7 @@ MABI = ilp32
 #
 SHARED_DIR = $(TOOLCHAIN_DIR)/mik32v2-shared
 HAL_DIR = $(TOOLCHAIN_DIR)/mik32-hal
-LDSCRIPT = $(SHARED_DIR)/ldscripts/eeprom.ld
+LDSCRIPT = $(PROJECT_DIR)/eeprom.ld
 RUNTIME = $(SHARED_DIR)/runtime/crt0.S
 
 INC += -I $(SHARED_DIR)/include

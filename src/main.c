@@ -43,19 +43,6 @@ void LedBlink(void)
 	GPIO_0->OUTPUT ^= 1 << PIN_LED1; // Toggle port 0 pin 3
 }
 
-void LedButton(void)
-{
-	// State check port 1 pin 15
-	if (GPIO_0->STATE & (1 << PIN_BUTTON)) 
-	{
-		GPIO_1->OUTPUT &= ~(1 << PIN_LED2); // Reset port 0 pin 10
-	}
-	else
-	{
-		GPIO_1->OUTPUT |= (1 << PIN_LED2); // Set port 0 pin 10
-	}
-}
-
 void trap_handler()
 {	
 	// xprintf("EPIC->STATUS = %x\r\n", EPIC->STATUS);
@@ -118,16 +105,6 @@ int main(void)
 	// GPIO port 1 pin 3 (LED2) Init as Output
 	PAD_CONFIG->PORT_1_CFG &= ~(0b11 << (2 * PIN_LED2)); // Clear port 1 pin 3 settings
 	GPIO_1->DIRECTION_OUT = (1 << PIN_LED2); // Set port 1 pin 3 direction as output
-
-	// GPIO port 0 pin 8 (BUTTON) Init as Input
-	PAD_CONFIG->PORT_0_CFG &= ~(0b11 << (2 * PIN_BUTTON)); // Clear port 0 pin 8 settings
-	GPIO_0->DIRECTION_IN = (1 << PIN_BUTTON); // Set port 0 pin 8 direction as input
-
-	// (!!!) DEBUG PIN
-	PAD_CONFIG->PORT_1_CFG &= ~(0b11 << (2 * 10));
-	GPIO_1->DIRECTION_OUT = (1 << 10);
-
-	int counter = 0;
 
 	while (1)
 	{

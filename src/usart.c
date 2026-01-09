@@ -7,7 +7,7 @@ extern volatile int32_t analog_humidity[2];
 
 struct usart_modbus_buffer ub;
 
-uint16_t CrcModbus(uint8_t *buffer, uint16_t length)
+uint16_t CrcModbus(volatile uint8_t *buffer, uint16_t length)
 {
     uint16_t crc = 0xFFFF;
     for (uint16_t i = 0; i < length; i++)
@@ -69,8 +69,14 @@ void ParseAndAnswer(uint8_t *command_input)
                 data_count = (command_input[4] << 8) | command_input[5];
 
                 if (reg_address + data_count - 1 > DO_COUNT - 1)
+                {
                     // Error code 0x02: Illegal Data Address
+                    answer_output[2] = 0x81;
+                    answer_output[3] = 0x02;
+                    answer_size = 3;
+                    UART_0_SendAnswer(answer_output, answer_size);
                     return;
+                }
                 else
                 {
                     answer_output[2] = 0x01;
@@ -96,7 +102,7 @@ void ParseAndAnswer(uint8_t *command_input)
                 break;
             // Read Input Status
             case 0x02:
-                
+                // (!!!)
                 break;
             // Read Holding Registers
             case 0x03:
@@ -144,14 +150,24 @@ void ParseAndAnswer(uint8_t *command_input)
                 else
                 {
                     // Error code 0x02: Illegal Data Address
+                    answer_output[2] = 0x84;
+                    answer_output[3] = 0x02;
+                    answer_size = 3;
+                    UART_0_SendAnswer(answer_output, answer_size);
                     return;
                 }
                 break;
             // Force Single Coil
             case 0x05:
                 if (reg_address > DO_COUNT - 1)
+                {
                     // Error code 0x02: Illegal Data Address
+                    answer_output[2] = 0x85;
+                    answer_output[3] = 0x02;
+                    answer_size = 3;
+                    UART_0_SendAnswer(answer_output, answer_size);
                     return;
+                }
                 else
                 {
                     uint16_t data_value = (command_input[4] << 8) | command_input[5];
@@ -171,8 +187,13 @@ void ParseAndAnswer(uint8_t *command_input)
                         GPIO_0->OUTPUT &= ~(1 << pin_number);
                     }
                     else
-                        // Error code 0x03: Illegal Data Value
+                    {
+                        answer_output[2] = 0x85;
+                        answer_output[3] = 0x03;
+                        answer_size = 3;
+                        UART_0_SendAnswer(answer_output, answer_size);
                         return;
+                    }
                     answer_output[2] = command_input[2];
                     answer_output[3] = command_input[3];
                     answer_output[4] = command_input[4];
@@ -184,14 +205,26 @@ void ParseAndAnswer(uint8_t *command_input)
             // Preset Single Register
             case 0x06:
                 if (reg_address != 0)
+                {
                     // Error code 0x02: Illegal Data Address
+                    answer_output[2] = 0x86;
+                    answer_output[3] = 0x02;
+                    answer_size = 3;
+                    UART_0_SendAnswer(answer_output, answer_size);
                     return;
+                }
                 else
                 {
                     uint16_t data_value = (command_input[4] << 8) | command_input[5];
                     if (data_value > 247)
+                    {
                         // Error code 0x03: Illegal Data Value
+                        answer_output[2] = 0x86;
+                        answer_output[3] = 0x03;
+                        answer_size = 3;
+                        UART_0_SendAnswer(answer_output, answer_size);
                         return;
+                    }
                     else
                     {
                         /// (!!!) Whire address to EEPROM
@@ -201,44 +234,16 @@ void ParseAndAnswer(uint8_t *command_input)
                 break;
             defaulf:
                 // Error code 0x01: Illegal Function
+                answer_output[2] = 0x81;
+                answer_output[3] = 0x01;
+                answer_size = 3;
+                UART_0_SendAnswer(answer_output, answer_size);
                 return;
         }
     }
     answer_output[1] = command_input[1];
 
-    // (!!!) Debug Echo
-    // for (int i = 0; i < 6; i++)
-    // {
-    //     UART_0_SendByte(command_input[i]);
-    // }
-    // // (!!!) Debug Calc and Send CRC
-    // uint16_t crc = CrcModbus(command_input, 6);
-    // UART_0_SendByte(crc & 0xFF);
-    // UART_0_SendByte((crc >> 8) & 0xFF);
-
-    // for (int i = 0; i < 6; i++)
-    // {
-    //     UART_0_SendByte(command_input[i]);
-    // }
-    // (!!!) Debug Calc and Send CRC
-    uint16_t crc = CrcModbus(answer_output, answer_size);
-    answer_output[answer_size] = crc & 0xFF;
-    answer_output[answer_size + 1] = (crc >> 8) & 0xFF;
-
-    GPIO_1->OUTPUT |= (1 << PIN_LED2);
-
-    // ENABLE
-    GPIO_1->OUTPUT |= (1 << PIN_REDE);
-    for (volatile int debug_delay = 0; debug_delay < 100; debug_delay++);
-
-    for (int i = 0; i < answer_size + 2; i++)
-    {
-        UART_0_SendByte(answer_output[i]);
-    }
-
-    // DISABLE
-    for (volatile int debug_delay = 0; debug_delay < 100; debug_delay++);
-    GPIO_1->OUTPUT &= ~(1 << PIN_REDE);
+    UART_0_SendAnswer(answer_output, answer_size);
 }
 
 void UART_0_Init()
@@ -289,6 +294,29 @@ void UART_0_IRQHandler()
         if ((*ub.pointer_receiving_string == 8) & (*ub.pointer_receiving_string != 0))
 		    SwitchUBString(&ub);
     }
+}
+
+void UART_0_SendAnswer(volatile uint8_t *data, uint32_t size)
+{
+    // Calc Answer CRC
+    uint16_t crc = CrcModbus(data, size);
+    data[size] = crc & 0xFF;
+    data[size + 1] = (crc >> 8) & 0xFF;
+
+    // Enable REDE
+    for (volatile int rede_delay = 0; rede_delay < 500; rede_delay++);
+    GPIO_1->OUTPUT |= (1 << PIN_REDE);
+    for (volatile int rede_delay = 0; rede_delay < 500; rede_delay++);
+
+    // Send Answer
+    for (int i = 0; i < size + 2; i++)
+        UART_0_SendByte(data[i]);
+
+    // Disable REDE
+    for (volatile int rede_delay = 0; rede_delay < 500; rede_delay++);
+    GPIO_1->OUTPUT &= ~(1 << PIN_REDE);
+    for (volatile int rede_delay = 0; rede_delay < 500; rede_delay++);
+
 }
 
 void UART_0_SendByte(uint8_t data)

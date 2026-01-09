@@ -31,7 +31,7 @@
 
 // DHT22 Sensors Pins (PORT_1)
 #define PIN_DHT1 6	 	            // DHT22 at PORT_1_6
-#define PIN_DHT2 7	 	            // DHT22 is PORT_1_6
+#define PIN_DHT2 7	 	            // DHT22 at PORT_1_6
 
 // Relay Pins (PORT_0)
 #define PIN_RELAY1 0

@@ -1,17 +1,5 @@
 #include "main.h"
 
-/*
-
-PORT 1_6
-
-*/
-
-
-void DHT22_Delay(int32_t value)
-{
-    for (volatile int delay_counter = 0; delay_counter < value; delay_counter++);
-}
-
 void DHT22_Read(uint16_t pin_number, volatile uint32_t *temperature, volatile uint32_t *humidity)
 {
     uint8_t data[5] = {0, 0, 0, 0, 0};
@@ -23,7 +11,7 @@ void DHT22_Read(uint16_t pin_number, volatile uint32_t *temperature, volatile ui
     // Set pin as output
 	GPIO_1->DIRECTION_OUT = (1 << pin_number);
     // Delay 5 ms
-    DHT22_Delay(4500);
+    for (volatile int dht_delay = 0; dht_delay < 4500; dht_delay++);
 
     // Set pin as input
    	GPIO_1->DIRECTION_IN = (1 << pin_number);
