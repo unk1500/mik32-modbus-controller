@@ -47,10 +47,10 @@ void trap_handler()
 {	
 	// xprintf("EPIC->STATUS = %x\r\n", EPIC->STATUS);
 	// xprintf("EPIC->RAW_STATUS = %x\r\n", EPIC->RAW_STATUS);
-	if (EPIC->RAW_STATUS & (1 << EPIC_UART_0_INDEX))
+	if (EPIC->RAW_STATUS & (1 << EPIC_UART_1_INDEX))
 	{
-		UART_0_IRQHandler();
-		EPIC->CLEAR = 1 << EPIC_UART_0_INDEX;
+		UART_1_IRQHandler();
+		EPIC->CLEAR = 1 << EPIC_UART_1_INDEX;
 	}
 	else if (EPIC->RAW_STATUS & (1 << EPIC_TIMER32_0_INDEX))
 	{
@@ -61,6 +61,11 @@ void trap_handler()
 		// Epic Timer32 Flag Clear
 		EPIC->CLEAR = 1 << EPIC_TIMER32_0_INDEX;
 	}
+}
+
+void xputc(char c)
+{
+	UART_0_SendByte(c);
 }
 
 int main(void)
@@ -74,12 +79,17 @@ int main(void)
 	EPIC->MASK_LEVEL_CLEAR = 0xFFFF;
 	EPIC->CLEAR = 0xFFFF;
 	// Set Timre32 Mask Interrupt
-	EPIC->MASK_LEVEL_SET = 1 << EPIC_TIMER32_0_INDEX;
-	// Set UART0 Mask Interrupt
-    EPIC->MASK_LEVEL_SET = (1 << EPIC_UART_0_INDEX);
+	EPIC->MASK_LEVEL_SET = (1 << EPIC_TIMER32_0_INDEX);
+	// Set UART1 Mask Interrupt
+    EPIC->MASK_LEVEL_SET = (1 << EPIC_UART_1_INDEX);
 
-	// UART_0 (Modbus RTU) Init
+	// UART_0 (Debug) Init
 	UART_0_Init();
+	// UART_1 (Modbus RTU) Init
+	UART_1_Init();
+
+	// EEPROM Susystem Init
+	// EEPROM_Init();
 
 	// Interrupts Enable 
 	EnableInterrupts();
@@ -105,6 +115,8 @@ int main(void)
 	// GPIO port 1 pin 3 (LED2) Init as Output
 	PAD_CONFIG->PORT_1_CFG &= ~(0b11 << (2 * PIN_LED2)); // Clear port 1 pin 3 settings
 	GPIO_1->DIRECTION_OUT = (1 << PIN_LED2); // Set port 1 pin 3 direction as output
+
+	// device_address = EEPROM_Read_DevAddress();
 
 	while (1)
 	{

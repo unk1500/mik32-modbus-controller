@@ -17,6 +17,7 @@
 
 #include "usart.h"
 #include "dht22.h"
+// #include "eeprom.h"
 #include "xprintf.h"
 
 #define	MIK32V2

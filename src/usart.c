@@ -74,7 +74,7 @@ void ParseAndAnswer(uint8_t *command_input)
                     answer_output[2] = 0x81;
                     answer_output[3] = 0x02;
                     answer_size = 3;
-                    UART_0_SendAnswer(answer_output, answer_size);
+                    UART_1_SendAnswer(answer_output, answer_size);
                     return;
                 }
                 else
@@ -153,7 +153,7 @@ void ParseAndAnswer(uint8_t *command_input)
                     answer_output[2] = 0x84;
                     answer_output[3] = 0x02;
                     answer_size = 3;
-                    UART_0_SendAnswer(answer_output, answer_size);
+                    UART_1_SendAnswer(answer_output, answer_size);
                     return;
                 }
                 break;
@@ -165,7 +165,7 @@ void ParseAndAnswer(uint8_t *command_input)
                     answer_output[2] = 0x85;
                     answer_output[3] = 0x02;
                     answer_size = 3;
-                    UART_0_SendAnswer(answer_output, answer_size);
+                    UART_1_SendAnswer(answer_output, answer_size);
                     return;
                 }
                 else
@@ -191,7 +191,7 @@ void ParseAndAnswer(uint8_t *command_input)
                         answer_output[2] = 0x85;
                         answer_output[3] = 0x03;
                         answer_size = 3;
-                        UART_0_SendAnswer(answer_output, answer_size);
+                        UART_1_SendAnswer(answer_output, answer_size);
                         return;
                     }
                     answer_output[2] = command_input[2];
@@ -210,7 +210,7 @@ void ParseAndAnswer(uint8_t *command_input)
                     answer_output[2] = 0x86;
                     answer_output[3] = 0x02;
                     answer_size = 3;
-                    UART_0_SendAnswer(answer_output, answer_size);
+                    UART_1_SendAnswer(answer_output, answer_size);
                     return;
                 }
                 else
@@ -222,7 +222,7 @@ void ParseAndAnswer(uint8_t *command_input)
                         answer_output[2] = 0x86;
                         answer_output[3] = 0x03;
                         answer_size = 3;
-                        UART_0_SendAnswer(answer_output, answer_size);
+                        UART_1_SendAnswer(answer_output, answer_size);
                         return;
                     }
                     else
@@ -237,24 +237,17 @@ void ParseAndAnswer(uint8_t *command_input)
                 answer_output[2] = 0x81;
                 answer_output[3] = 0x01;
                 answer_size = 3;
-                UART_0_SendAnswer(answer_output, answer_size);
+                UART_1_SendAnswer(answer_output, answer_size);
                 return;
         }
     }
     answer_output[1] = command_input[1];
 
-    UART_0_SendAnswer(answer_output, answer_size);
+    UART_1_SendAnswer(answer_output, answer_size);
 }
 
 void UART_0_Init()
 {
-    // Init UART Modbus Buffer
-    ub.pointer_receiving_string = &ub.buffer0.size;
-    ub.buffer0.size = 0;
-    ub.buffer1.size = 0;
-    memset((void *)ub.buffer0.buffer, 0, 128);
-	memset((void *)ub.buffer1.buffer, 0, 128);
-
     // Set UART0 GPIO registers
     // (!) PO Clock enable in main.c
     // UART0 RX: P0.5
@@ -269,19 +262,49 @@ void UART_0_Init()
     UART_0->CONTROL2 = 0;
     UART_0->CONTROL3 = 0;
     UART_0->FLAGS = 0xFFFFFFFF;
-    UART_0->DIVIDER = OSC_SYSTEM_VALUE / 115200;
+    UART_0->DIVIDER = OSC_SYSTEM_VALUE / 9600;
     UART_0->CONTROL1 = UART_CONTROL1_RXNEIE_M | UART_CONTROL1_TE_M | UART_CONTROL1_RE_M | UART_CONTROL1_UE_M;
 
     while ((UART_0->FLAGS & UART_FLAGS_REACK_M) == 0);
     while ((UART_0->FLAGS & UART_FLAGS_TEACK_M) == 0);
 }
 
-void UART_0_IRQHandler()
+void UART_1_Init()
 {
-    if (UART_0->FLAGS & UART_FLAGS_RXNE_M) // (!!!) Maybe add !ORE Flag here?
+    // Init UART Modbus Buffer
+    ub.pointer_receiving_string = &ub.buffer0.size;
+    ub.buffer0.size = 0;
+    ub.buffer1.size = 0;
+    memset((void *)ub.buffer0.buffer, 0, 128);
+	memset((void *)ub.buffer1.buffer, 0, 128);
+
+    // Set UART1 GPIO registers
+    // (!) P1 Clock enable in main.c
+    // UART1 RX: P1.8
+    PAD_CONFIG->PORT_1_CFG &= ~(0b11 << (2 * 8));
+	PAD_CONFIG->PORT_1_CFG |= 0b01 << (2 * 8);
+    // UART1 TX: P1.9
+    PAD_CONFIG->PORT_1_CFG &= ~(0b11 << (2 * 9));
+	PAD_CONFIG->PORT_1_CFG |= 0b01 << (2 * 9);
+
+    // Set UART1 control registers
+    PM->CLK_APB_P_SET |= PM_CLOCK_APB_P_UART_1_M;
+    UART_1->CONTROL2 = 0;
+    UART_1->CONTROL3 = 0;
+    UART_1->FLAGS = 0xFFFFFFFF;
+    UART_1->DIVIDER = OSC_SYSTEM_VALUE / 115200;
+    UART_1->CONTROL1 = UART_CONTROL1_RXNEIE_M | UART_CONTROL1_TE_M | UART_CONTROL1_RE_M | UART_CONTROL1_UE_M;
+
+    while ((UART_1->FLAGS & UART_FLAGS_REACK_M) == 0);
+    while ((UART_1->FLAGS & UART_FLAGS_TEACK_M) == 0);
+}
+
+void UART_1_IRQHandler()
+{
+    if (UART_1->FLAGS & UART_FLAGS_RXNE_M) // (!!!) Maybe add !ORE Flag here?
     {
         // Read Data and Clear RXNE Flag
-        uint8_t data = UART_0->RXDATA;
+        uint8_t data = UART_1->RXDATA;
         // Data Buffer Address + Data Count + Size of Data Count = New Byte
         *(uint8_t *)(
             (uint8_t *)ub.pointer_receiving_string + 
@@ -296,7 +319,7 @@ void UART_0_IRQHandler()
     }
 }
 
-void UART_0_SendAnswer(volatile uint8_t *data, uint32_t size)
+void UART_1_SendAnswer(volatile uint8_t *data, uint32_t size)
 {
     // Calc Answer CRC
     uint16_t crc = CrcModbus(data, size);
@@ -310,12 +333,17 @@ void UART_0_SendAnswer(volatile uint8_t *data, uint32_t size)
 
     // Send Answer
     for (int i = 0; i < size + 2; i++)
-        UART_0_SendByte(data[i]);
+        UART_1_SendByte(data[i]);
 
     // Disable REDE
     for (volatile int rede_delay = 0; rede_delay < 500; rede_delay++);
     GPIO_1->OUTPUT &= ~(1 << PIN_REDE);
     for (volatile int rede_delay = 0; rede_delay < 500; rede_delay++);
+
+    // (!!!) DEBUG OUTPUT
+    for (int i = 0; i < size + 2; i++)
+        xprintf("%02X ", data[i]);
+    xprintf("\r\n");
 
 }
 
@@ -323,4 +351,10 @@ void UART_0_SendByte(uint8_t data)
 {
     while ((UART_0->FLAGS & UART_FLAGS_TXE_M) == 0);
     UART_0->TXDATA = data;
+}
+
+void UART_1_SendByte(uint8_t data)
+{
+    while ((UART_1->FLAGS & UART_FLAGS_TXE_M) == 0);
+    UART_1->TXDATA = data;
 }
