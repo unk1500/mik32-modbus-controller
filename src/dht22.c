@@ -1,5 +1,14 @@
 #include "main.h"
 
+// Code execute has different time from different sources: RAM, EEPROM, SPIFI.
+// DHT22 is senstive to timings.
+// In this file I use hard-coded integer constansts for RAM execute case.
+// Disabled strings is a legacy from EEPROM-based code.
+// Execute time ratio:
+//      RAM     0.5x
+//      EEPROM    1x
+//      SPIFI    10x
+
 void DHT22_Read(uint16_t pin_number, volatile uint32_t *temperature, volatile uint32_t *humidity)
 {
     uint8_t data[5] = {0, 0, 0, 0, 0};
@@ -11,7 +20,8 @@ void DHT22_Read(uint16_t pin_number, volatile uint32_t *temperature, volatile ui
     // Set pin as output
 	GPIO_1->DIRECTION_OUT = (1 << pin_number);
     // Delay 5 ms
-    for (volatile int dht_delay = 0; dht_delay < 4500; dht_delay++);
+    // for (volatile int dht_delay = 0; dht_delay < 4500; dht_delay++);
+    for (volatile int dht_delay = 0; dht_delay < 9000; dht_delay++);
 
     // Set pin as input
    	GPIO_1->DIRECTION_IN = (1 << pin_number);
@@ -21,7 +31,8 @@ void DHT22_Read(uint16_t pin_number, volatile uint32_t *temperature, volatile ui
     while (GPIO_1->STATE & (1 << pin_number))
     {
         timeout++;
-        if (timeout > 100)
+        // if (timeout > 100)
+        if (timeout > 200)
             return;
     }
 
@@ -30,7 +41,8 @@ void DHT22_Read(uint16_t pin_number, volatile uint32_t *temperature, volatile ui
     while (!(GPIO_1->STATE & (1 << pin_number)))
     {
         timeout++;
-        if (timeout > 150)
+        // if (timeout > 150)
+        if (timeout > 300)
             return;
     }
 
@@ -39,7 +51,8 @@ void DHT22_Read(uint16_t pin_number, volatile uint32_t *temperature, volatile ui
     while (GPIO_1->STATE & (1 << pin_number))
     {
         timeout++;
-        if (timeout > 150)
+        // if (timeout > 150)
+        if (timeout > 300)
             return;
     }
 
@@ -55,7 +68,8 @@ void DHT22_Read(uint16_t pin_number, volatile uint32_t *temperature, volatile ui
         while (!(GPIO_1->STATE & (1 << pin_number)))
         {
             timeout++;
-            if (timeout > 150)
+            // if (timeout > 150)
+            if (timeout > 300)
                 return;
         }
 
@@ -64,11 +78,13 @@ void DHT22_Read(uint16_t pin_number, volatile uint32_t *temperature, volatile ui
         while (GPIO_1->STATE & (1 << pin_number))
         {
             timeout++;
-            if (timeout > 150)
+            // if (timeout > 150)
+            if (timeout > 300)
                 return;
         }
 
-        if (timeout > 80)
+        // if (timeout > 80)
+        if (timeout > 160)
             data[j] |= 0x1;
     }
     

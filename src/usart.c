@@ -227,6 +227,9 @@ void ParseAndAnswer(uint8_t *command_input)
                     }
                     else
                     {
+                        xprintf("RAM1M Code 0x06\r\n");
+                        
+                        EEPROM_Read_DevAddress();
                         /// (!!!) Whire address to EEPROM
                     }
 
@@ -341,9 +344,9 @@ void UART_1_SendAnswer(volatile uint8_t *data, uint32_t size)
     for (volatile int rede_delay = 0; rede_delay < 500; rede_delay++);
 
     // (!!!) DEBUG OUTPUT
-    for (int i = 0; i < size + 2; i++)
-        xprintf("%02X ", data[i]);
-    xprintf("\r\n");
+    // for (int i = 0; i < size + 2; i++)
+    //     xprintf("%02X ", data[i]);
+    // xprintf("\r\n");
 
 }
 

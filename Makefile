@@ -29,7 +29,8 @@ MABI = ilp32
 #
 SHARED_DIR = $(TOOLCHAIN_DIR)/mik32v2-shared
 HAL_DIR = $(TOOLCHAIN_DIR)/mik32-hal
-LDSCRIPT = $(PROJECT_DIR)/eeprom.ld
+#LDSCRIPT = $(PROJECT_DIR)/ram.ld
+LDSCRIPT = $(PROJECT_DIR)/spifi.ld
 RUNTIME = $(SHARED_DIR)/runtime/crt0.S
 
 INC += -I $(SHARED_DIR)/include

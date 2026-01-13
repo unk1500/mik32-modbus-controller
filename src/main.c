@@ -88,8 +88,8 @@ int main(void)
 	// UART_1 (Modbus RTU) Init
 	UART_1_Init();
 
-	// EEPROM Susystem Init
-	// EEPROM_Init();
+	// EEPROM Subsystem Init
+	EEPROM_Init();
 
 	// Interrupts Enable 
 	EnableInterrupts();
@@ -116,7 +116,7 @@ int main(void)
 	PAD_CONFIG->PORT_1_CFG &= ~(0b11 << (2 * PIN_LED2)); // Clear port 1 pin 3 settings
 	GPIO_1->DIRECTION_OUT = (1 << PIN_LED2); // Set port 1 pin 3 direction as output
 
-	// device_address = EEPROM_Read_DevAddress();
+	device_address = EEPROM_Read_DevAddress();
 
 	while (1)
 	{
