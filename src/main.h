@@ -44,6 +44,9 @@
 #define PIN_RELAY1 0
 #define PIN_RELAY2 1
 
+// Digital Input Pins (PORT_2)
+#define PIN_REED 7
+
 // RS-485 Pins (PORT_1)
 #define PIN_REDE 0
 

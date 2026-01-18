@@ -16,7 +16,11 @@ extern volatile struct usart_modbus_buffer ub;
 void ClockInit(void)
 {
 	// GPIO Clocks Init
-	PM->CLK_APB_P_SET |= PM_CLOCK_APB_P_GPIO_0_M | PM_CLOCK_APB_P_GPIO_1_M | PM_CLOCK_APB_P_TIMER32_1_M;
+	PM->CLK_APB_P_SET |= 
+		PM_CLOCK_APB_P_GPIO_0_M | 
+		PM_CLOCK_APB_P_GPIO_1_M |
+		PM_CLOCK_APB_P_GPIO_2_M |
+		PM_CLOCK_APB_P_TIMER32_1_M;
 
 	// MCU Clocks Init
 	PM->CLK_APB_M_SET |= 
@@ -77,10 +81,10 @@ void trap_handler()
 		}
 		else
 		{
-			xprintf("ERR MB: Buffer size: %d\r\n", *ub.pointer_receiving_string);
-			*ub.pointer_receiving_string = 0;
 			// (!!!) DEBUG: MB Small Buffer Error Message
-			xprintf("ERR MB: Buffer less then 4 bytes\r\n");
+			// xprintf("ERR MB: Buffer less then 4 bytes\r\n");
+			// xprintf("ERR MB: Buffer size: %d\r\n", *ub.pointer_receiving_string);
+			*ub.pointer_receiving_string = 0;
 		}
 			
 
@@ -137,6 +141,10 @@ int main(void)
 	GPIO_0->DIRECTION_OUT = (1 << PIN_RELAY1);
 	GPIO_0->DIRECTION_OUT = (1 << PIN_RELAY2);
 
+	// Digital Input Pin Init
+	PAD_CONFIG->PORT_2_CFG &= ~(0b11 << (2 * PIN_REED));
+	GPIO_2->DIRECTION_IN = (1 << PIN_REED);
+
 	// RS-485 REDE Pin Init
     GPIO_1->OUTPUT &= ~(1 << PIN_REDE);
 	PAD_CONFIG->PORT_1_CFG &= ~(0b11 << (2 * PIN_REDE));
@@ -169,7 +177,7 @@ int main(void)
 			{
 				*ub.pointer_receiving_string = 0;
 				// (!!!) DEBUG: MB CRC Error Message
-				xprintf("ERR MB: CRC\r\n");
+				// xprintf("ERR MB: CRC\r\n");
 			}
 				
 		}

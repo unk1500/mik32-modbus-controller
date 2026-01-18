@@ -52,11 +52,11 @@ uint32_t CheckCommandCrc(volatile uint8_t *buffer)
     uint16_t crc_in = buffer[6] | buffer[7] << 8;
 
     // (!!!) DEBUG
-    xprintf("CRC MSG: ");
-    for (int i = 0; i < 6; i++)
-        xprintf("%02X ", buffer[i]);
-    xprintf("\r\n");
-    xprintf("CRC calc: %04X, CRC in: %04X\r\n", crc_calc, crc_in);
+    // xprintf("CRC MSG: ");
+    // for (int i = 0; i < 6; i++)
+    //     xprintf("%02X ", buffer[i]);
+    // xprintf("\r\n");
+    // xprintf("CRC calc: %04X, CRC in: %04X\r\n", crc_calc, crc_in);
 
     if (crc_calc == crc_in)
         return 0;
@@ -73,10 +73,10 @@ void ParseAndAnswer(uint8_t *command_input)
     uint32_t pin_number;
 
     // (!!!) DEBUG OUTPUT
-    xprintf("PARSE  : ");
-    for (int i = 0; i < 8; i++)
-        xprintf("%02X ", command_input[i]);
-    xprintf("\r\n");
+    // xprintf("PARSE  : ");
+    // for (int i = 0; i < 8; i++)
+    //     xprintf("%02X ", command_input[i]);
+    // xprintf("\r\n");
 
     // Device address
     answer_output[0] = device_address;
@@ -126,7 +126,12 @@ void ParseAndAnswer(uint8_t *command_input)
                 break;
             // Read Input Status
             case 0x02:
-                // (!!!)
+                answer_output[2] = 0x01;
+                if (GPIO_2->STATE & (1 << PIN_REED))
+                    answer_output[3] = 0;
+                else
+                    answer_output[3] = 1;
+                answer_size = 4;
                 break;
             // Read Holding Registers
             case 0x03:
@@ -396,10 +401,10 @@ void UART_1_SendAnswer(volatile uint8_t *data, uint32_t size)
     for (volatile int rede_delay = 0; rede_delay < 500; rede_delay++);
 
     // (!!!) DEBUG OUTPUT
-    xprintf("A: ");
-    for (int i = 0; i < size + 2; i++)
-        xprintf("%02X ", data[i]);
-    xprintf("\r\n");
+    // xprintf("A: ");
+    // for (int i = 0; i < size + 2; i++)
+    //     xprintf("%02X ", data[i]);
+    // xprintf("\r\n");
 
 }
 
