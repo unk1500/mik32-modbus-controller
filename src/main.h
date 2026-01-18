@@ -25,6 +25,11 @@
 
 #define OSC_SYSTEM_VALUE ((uint32_t)32000000U)
 
+// Modbus speed is 115200, timeout criteria is 3,5 words
+// Timeout_Value = (1 / 115200) * (8 data bytes + 1 start byte + 1 stop byte) * 3.5 = 0.000303819 s
+// Timer_Top_Values = 0.000303819 / (1 / 32M) = 0d9722
+#define MB_TIMEOUT_VALUE ((uint32_t)9722)
+
 // Registers Parameters
 #define DO_COUNT 2	 	            // Coils Count
 #define DI_COUNT 1	 	            // Discrete Inputs Count

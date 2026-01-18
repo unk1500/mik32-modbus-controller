@@ -16,7 +16,7 @@ extern volatile struct usart_modbus_buffer ub;
 void ClockInit(void)
 {
 	// GPIO Clocks Init
-	PM->CLK_APB_P_SET |= PM_CLOCK_APB_P_GPIO_0_M | PM_CLOCK_APB_P_GPIO_1_M;
+	PM->CLK_APB_P_SET |= PM_CLOCK_APB_P_GPIO_0_M | PM_CLOCK_APB_P_GPIO_1_M | PM_CLOCK_APB_P_TIMER32_1_M;
 
 	// MCU Clocks Init
 	PM->CLK_APB_M_SET |= 
@@ -45,8 +45,6 @@ void LedBlink(void)
 
 void trap_handler()
 {	
-	// xprintf("EPIC->STATUS = %x\r\n", EPIC->STATUS);
-	// xprintf("EPIC->RAW_STATUS = %x\r\n", EPIC->RAW_STATUS);
 	if (EPIC->RAW_STATUS & (1 << EPIC_UART_1_INDEX))
 	{
 		UART_1_IRQHandler();
@@ -56,10 +54,40 @@ void trap_handler()
 	{
 		flag_measurement = 1;
 		LedBlink();
+
 		// Timer32 Overflow Interrupt Flag Clear
 		TIMER32_0->INT_CLEAR = TIMER32_INT_OVERFLOW_M;
 		// Epic Timer32 Flag Clear
 		EPIC->CLEAR = 1 << EPIC_TIMER32_0_INDEX;
+	}
+	else if (EPIC->RAW_STATUS & (1 << EPIC_TIMER32_1_INDEX))
+	{
+		// xprintf("EPIC->STATUS = %x\r\n", EPIC->STATUS);
+		// xprintf("EPIC->RAW_STATUS = %x\r\n", EPIC->RAW_STATUS);
+
+		// Clear timer counter and disable timer
+		TIMER32_1->ENABLE |= TIMER32_ENABLE_TIM_CLR_M;
+		TIMER32_1->ENABLE &= ~TIMER32_ENABLE_TIM_EN_M;
+
+		// Check buffer size
+		if (*ub.pointer_receiving_string > 3)
+		{
+			// Toggle buffers
+			SwitchUBString(&ub);
+		}
+		else
+		{
+			xprintf("ERR MB: Buffer size: %d\r\n", *ub.pointer_receiving_string);
+			*ub.pointer_receiving_string = 0;
+			// (!!!) DEBUG: MB Small Buffer Error Message
+			xprintf("ERR MB: Buffer less then 4 bytes\r\n");
+		}
+			
+
+		// Timer32 Overflow Interrupt Flag Clear
+		TIMER32_1->INT_CLEAR = TIMER32_INT_OVERFLOW_M;
+		// Epic Timer32 Flag Clear
+		EPIC->CLEAR = 1 << EPIC_TIMER32_1_INDEX;
 	}
 }
 
@@ -71,15 +99,21 @@ void xputc(char c)
 int main(void)
 {
 	ClockInit();
-	// Timer32 Init
+	// TIMER32_0 (Blink and Measurement Timer) Init
 	TIMER32_0->TOP = 32000000;
 	TIMER32_0->INT_MASK = TIMER32_INT_OVERFLOW_M;
+	// TIMER32_1 (Modbus Timeout Timer) Init
+	TIMER32_1->TOP = MB_TIMEOUT_VALUE;
+	TIMER32_1->INT_MASK = TIMER32_INT_OVERFLOW_M;
+
 	// Epic Init
 	EPIC->MASK_EDGE_CLEAR = 0xFFFF;
 	EPIC->MASK_LEVEL_CLEAR = 0xFFFF;
 	EPIC->CLEAR = 0xFFFF;
-	// Set Timre32 Mask Interrupt
+	// Set TIMER32_0 Mask Interrupt
 	EPIC->MASK_LEVEL_SET = (1 << EPIC_TIMER32_0_INDEX);
+	// Set TIMER32_1 Mask Interrupt
+	EPIC->MASK_LEVEL_SET = (1 << EPIC_TIMER32_1_INDEX);
 	// Set UART1 Mask Interrupt
     EPIC->MASK_LEVEL_SET = (1 << EPIC_UART_1_INDEX);
 
@@ -94,7 +128,7 @@ int main(void)
 	// Interrupts Enable 
 	EnableInterrupts();
 
-	// Timer32 Enable
+	// TIMER32_0 Enable
 	TIMER32_0->ENABLE = TIMER32_ENABLE_TIM_EN_M;
 
 	// Relay GPIO Pins Init
@@ -126,7 +160,18 @@ int main(void)
 			memset(command_input, 0, 8);
 			memcpy(command_input, ub.pointer_finished_string + 1, 8);
 			ub.flag_command_ready = 0;
-			ParseAndAnswer(command_input);
+
+			if (!CheckCommandCrc(command_input))
+			{
+				ParseAndAnswer(command_input);
+			}
+			else
+			{
+				*ub.pointer_receiving_string = 0;
+				// (!!!) DEBUG: MB CRC Error Message
+				xprintf("ERR MB: CRC\r\n");
+			}
+				
 		}
 
 		if (flag_measurement == 1)

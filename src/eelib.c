@@ -57,6 +57,7 @@ uint8_t EEPROM_Read_DevAddress()
 
     EEPROM_Read(EE_ADDRESS, data, 4);
     eeprom_devaddr = swap_word(data[0]);
+    // (!!!) DEBUG
     xprintf("First Read DevAddr: %02X\r\n", eeprom_devaddr);
 
     if ((eeprom_devaddr == 0x00) || (eeprom_devaddr > 247))
@@ -65,6 +66,7 @@ uint8_t EEPROM_Read_DevAddress()
         {
             EEPROM_Read(EE_ADDRESS, data, 4);
             eeprom_devaddr = swap_word(data[0]);
+            // (!!!) DEBUG
             xprintf("Second Read DevAddr: %02X\r\n", eeprom_devaddr);
 
             return eeprom_devaddr;

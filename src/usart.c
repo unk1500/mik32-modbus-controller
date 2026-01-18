@@ -7,6 +7,23 @@ extern volatile int32_t analog_humidity[2];
 
 struct usart_modbus_buffer ub;
 
+void SwitchUBString(struct usart_modbus_buffer *ub)
+{
+	if ((*ub).pointer_receiving_string == &(*ub).buffer0.size)
+	{
+		(*ub).buffer1.size = 0;
+		(*ub).pointer_receiving_string = &(*ub).buffer1.size;
+		(*ub).pointer_finished_string = &(*ub).buffer0.size;
+	}
+	else
+	{
+		(*ub).buffer0.size = 0;
+		(*ub).pointer_receiving_string = &(*ub).buffer0.size;
+		(*ub).pointer_finished_string = &(*ub).buffer1.size;
+	}
+	(*ub).flag_command_ready = 1;
+}
+
 uint16_t CrcModbus(volatile uint8_t *buffer, uint16_t length)
 {
     uint16_t crc = 0xFFFF;
@@ -29,21 +46,22 @@ uint16_t CrcModbus(volatile uint8_t *buffer, uint16_t length)
     return crc;
 }
 
-void SwitchUBString(struct usart_modbus_buffer *ub)
+uint32_t CheckCommandCrc(volatile uint8_t *buffer)
 {
-	if ((*ub).pointer_receiving_string == &(*ub).buffer0.size)
-	{
-		(*ub).buffer1.size = 0;
-		(*ub).pointer_receiving_string = &(*ub).buffer1.size;
-		(*ub).pointer_finished_string = &(*ub).buffer0.size;
-	}
-	else
-	{
-		(*ub).buffer0.size = 0;
-		(*ub).pointer_receiving_string = &(*ub).buffer0.size;
-		(*ub).pointer_finished_string = &(*ub).buffer1.size;
-	}
-	(*ub).flag_command_ready = 1;
+    uint16_t crc_calc = CrcModbus(buffer, 6);
+    uint16_t crc_in = buffer[6] | buffer[7] << 8;
+
+    // (!!!) DEBUG
+    xprintf("CRC MSG: ");
+    for (int i = 0; i < 6; i++)
+        xprintf("%02X ", buffer[i]);
+    xprintf("\r\n");
+    xprintf("CRC calc: %04X, CRC in: %04X\r\n", crc_calc, crc_in);
+
+    if (crc_calc == crc_in)
+        return 0;
+    else
+        return -1;
 }
 
 void ParseAndAnswer(uint8_t *command_input)
@@ -53,6 +71,12 @@ void ParseAndAnswer(uint8_t *command_input)
     uint16_t reg_address;
     uint16_t data_count;
     uint32_t pin_number;
+
+    // (!!!) DEBUG OUTPUT
+    xprintf("PARSE  : ");
+    for (int i = 0; i < 8; i++)
+        xprintf("%02X ", command_input[i]);
+    xprintf("\r\n");
 
     // Device address
     answer_output[0] = device_address;
@@ -71,8 +95,8 @@ void ParseAndAnswer(uint8_t *command_input)
                 if (reg_address + data_count - 1 > DO_COUNT - 1)
                 {
                     // Error code 0x02: Illegal Data Address
-                    answer_output[2] = 0x81;
-                    answer_output[3] = 0x02;
+                    answer_output[1] = 0x81;
+                    answer_output[2] = 0x02;
                     answer_size = 3;
                     UART_1_SendAnswer(answer_output, answer_size);
                     return;
@@ -150,8 +174,8 @@ void ParseAndAnswer(uint8_t *command_input)
                 else
                 {
                     // Error code 0x02: Illegal Data Address
-                    answer_output[2] = 0x84;
-                    answer_output[3] = 0x02;
+                    answer_output[1] = 0x84;
+                    answer_output[2] = 0x02;
                     answer_size = 3;
                     UART_1_SendAnswer(answer_output, answer_size);
                     return;
@@ -162,8 +186,8 @@ void ParseAndAnswer(uint8_t *command_input)
                 if (reg_address > DO_COUNT - 1)
                 {
                     // Error code 0x02: Illegal Data Address
-                    answer_output[2] = 0x85;
-                    answer_output[3] = 0x02;
+                    answer_output[1] = 0x85;
+                    answer_output[2] = 0x02;
                     answer_size = 3;
                     UART_1_SendAnswer(answer_output, answer_size);
                     return;
@@ -207,8 +231,8 @@ void ParseAndAnswer(uint8_t *command_input)
                 if (reg_address != 0)
                 {
                     // Error code 0x02: Illegal Data Address
-                    answer_output[2] = 0x86;
-                    answer_output[3] = 0x02;
+                    answer_output[1] = 0x86;
+                    answer_output[2] = 0x02;
                     answer_size = 3;
                     UART_1_SendAnswer(answer_output, answer_size);
                     return;
@@ -219,26 +243,40 @@ void ParseAndAnswer(uint8_t *command_input)
                     if (data_value > 247)
                     {
                         // Error code 0x03: Illegal Data Value
-                        answer_output[2] = 0x86;
-                        answer_output[3] = 0x03;
+                        answer_output[1] = 0x86;
+                        answer_output[2] = 0x03;
                         answer_size = 3;
                         UART_1_SendAnswer(answer_output, answer_size);
                         return;
                     }
                     else
                     {
-                        xprintf("RAM1M Code 0x06\r\n");
-                        
-                        EEPROM_Read_DevAddress();
-                        /// (!!!) Whire address to EEPROM
+                        if (!EEPROM_Write_DevAddress(data_value))
+                        {
+                            device_address = EEPROM_Read_DevAddress();
+                            answer_output[2] = command_input[2];
+                            answer_output[3] = command_input[3];
+                            answer_output[4] = command_input[4];
+                            answer_output[5] = command_input[5];
+                            answer_size = 6;
+                        }
+                        else
+                        {
+                            // Error code 0x04: Fatal Error
+                            answer_output[1] = 0x86;
+                            answer_output[2] = 0x04;
+                            answer_size = 3;
+                            UART_1_SendAnswer(answer_output, answer_size);
+                            return;
+                        }
                     }
 
                 }
                 break;
             defaulf:
                 // Error code 0x01: Illegal Function
-                answer_output[2] = 0x81;
-                answer_output[3] = 0x01;
+                answer_output[1] = 0x81;
+                answer_output[2] = 0x01;
                 answer_size = 3;
                 UART_1_SendAnswer(answer_output, answer_size);
                 return;
@@ -308,6 +346,16 @@ void UART_1_IRQHandler()
     {
         // Read Data and Clear RXNE Flag
         uint8_t data = UART_1->RXDATA;
+
+        // Check first data byte: device address
+        if (*ub.pointer_receiving_string == 0)
+        {
+            if (data == device_address)
+                TIMER32_1->ENABLE = TIMER32_ENABLE_TIM_EN_M;
+            else
+                return;
+        }
+
         // Data Buffer Address + Data Count + Size of Data Count = New Byte
         *(uint8_t *)(
             (uint8_t *)ub.pointer_receiving_string + 
@@ -317,8 +365,12 @@ void UART_1_IRQHandler()
         // Increment Data Count
 		++*ub.pointer_receiving_string;
 
-        if ((*ub.pointer_receiving_string == 8) & (*ub.pointer_receiving_string != 0))
-		    SwitchUBString(&ub);
+        // Clear modbus timer counter
+        TIMER32_1->ENABLE |= TIMER32_ENABLE_TIM_CLR_M;
+
+        return;
+
+        // (!) MB packet processing is in timer interrupt handler
     }
 }
 
@@ -344,9 +396,10 @@ void UART_1_SendAnswer(volatile uint8_t *data, uint32_t size)
     for (volatile int rede_delay = 0; rede_delay < 500; rede_delay++);
 
     // (!!!) DEBUG OUTPUT
-    // for (int i = 0; i < size + 2; i++)
-    //     xprintf("%02X ", data[i]);
-    // xprintf("\r\n");
+    xprintf("A: ");
+    for (int i = 0; i < size + 2; i++)
+        xprintf("%02X ", data[i]);
+    xprintf("\r\n");
 
 }
 
