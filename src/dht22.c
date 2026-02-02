@@ -11,6 +11,8 @@
 
 void DHT22_Read(uint16_t pin_number, volatile uint32_t *temperature, volatile uint32_t *humidity)
 {
+    *temperature = 0xFFFF;
+    *humidity = 0xFFFF;
     uint8_t data[5] = {0, 0, 0, 0, 0};
     uint32_t timeout;
 
@@ -25,6 +27,7 @@ void DHT22_Read(uint16_t pin_number, volatile uint32_t *temperature, volatile ui
 
     // Set pin as input
    	GPIO_1->DIRECTION_IN = (1 << pin_number);
+    for (volatile int dht_delay = 0; dht_delay < 2; dht_delay++);
 
     // Waiting for sensor about 30 us (pin must become low)
     timeout = 0;
